@@ -1,0 +1,52 @@
+import numpy as np
+from scipy.signal import butter, lfilter
+import matplotlib.pyplot as plt
+
+np.random.seed(0)
+pollution_data = np.random.normal(50, 10, 1440) + np.sin(np.arange(1440) / 60) * 20
+
+
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
+fs = 1.0 
+cutoff = 0.1  
+filtered_data = butter_lowpass_filter(pollution_data, cutoff, fs)
+
+def hourly_averages(data):
+    hourly_data = data.reshape(-1, 60).mean(axis=1)
+    print("Hourly averages:")
+    print(hourly_data)
+
+hourly_averages(pollution_data)
+hourly_averages(filtered_data)
+
+plt.figure(figsize=(12, 6))
+plt.plot(pollution_data, label='Original data', linestyle='--')
+plt.plot(filtered_data, label='Filtered data', linestyle='-')
+plt.xlabel('Time (minutes)')
+plt.ylabel('PM2.5 levels')
+plt.title('Air Quality Fluctuations')
+
+hourly_averages = hourly_averages(pollution_data)
+temp=150
+dangerous_hours = np.where(hourly_averages > temp)[0]
+plt.plot(dangerous_hours * 60, hourly_averages[dangerous_hours], 'ro', label='Dangerous hours')
+
+plt.legend()
+plt.show()
+
+
+peaks = np.where((pollution_data > 200) & (np.roll(pollution_data, -1) > 200) & (np.roll(pollution_data, -10) > 200))[0]
+plt.plot(peaks, pollution_data[peaks], 'go', label='Peaks')
+
+plt.legend()
+plt.show()
